@@ -36,6 +36,8 @@
 #
 # for feature values please see: pmempool feature help
 
+MIN_POOL=$((10 * 1024 * 1024)) # 4MiB
+
 LOG=grep${UNITTEST_NUM}.log
 
 exit_func=expect_normal_exit
@@ -70,8 +72,12 @@ function pmempool_feature_disable() {
 
 # pmempool_feature_test -- misc scenarios for each feature value
 function pmempool_feature_test() {
+	# create poolset
+	create_poolset $DIR/testset1 $MIN_POOL:$DIR/testfile11:x $MIN_POOL:$DIR/testfile21:x \
+	r $MIN_POOL:$DIR/testfile31:x $MIN_POOL:$DIR/testfile41:x r $MIN_POOL:$DIR/testfile51:x
+	
 	# create pool
-	expect_normal_exit $PMEMPOOL$EXESUFFIX create obj $DIR/pool.obj
+	expect_normal_exit $PMEMPOOL$EXESUFFIX create obj $DIR/testset1
 
 	case "$1" in
 	"SINGLEHDR")
