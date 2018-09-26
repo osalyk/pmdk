@@ -30,7 +30,7 @@
 # OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #
 #
-# pmempool_feature/TEST0 -- unit test for pmempool_feature_singlehdr
+# pmempool_feature/TEST0 -- unit test for SINGLEHDR
 #
 
 . ..\unittest\unittest.ps1

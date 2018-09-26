@@ -31,7 +31,7 @@
 # OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #
 #
-# pmempool_feature/TEST0 -- unit test for SINGLEHDR
+# pmempool_feature/TEST0 -- unit test (pmemcheck) for SINGLEHDR
 #
 
 . ../unittest/unittest.sh

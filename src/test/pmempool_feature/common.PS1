@@ -34,9 +34,12 @@
 # src/test/pmempool_feature/common.ps1 -- common part of pmempool_feature tests
 #
 
+$PART_SIZE= 10 * 1024 * 1024 # 10MiB
+$PART_SIZE_STR = ${PART_SIZE}.toString() + "B" #10MiB
+$POOLSET="$DIR\testset"
+
 $LOG = "grep${Env:UNITTEST_NUM}.log"
 remove_files $LOG
-
 
 $exit_func="expect_normal_exit"
 
@@ -44,7 +47,7 @@ $exit_func="expect_normal_exit"
 #
 # usage: pmempool_feature_query <feature>
 function pmempool_feature_query($arg1) {
-	$val=$(expect_normal_exit $PMEMPOOL feature -q $arg1 $DIR\pool.obj)
+	$val=$(expect_normal_exit $PMEMPOOL feature -q $arg1 $POOLSET)
 	echo "query $arg1 result is $val" >> $LOG
 }
 
@@ -52,7 +55,7 @@ function pmempool_feature_query($arg1) {
 #
 # usage: pmempool_feature_enable <feature> [no-query]
 function pmempool_feature_enable($arg1, $arg2) {
-	& $exit_func $PMEMPOOL feature -e $arg1 $DIR\pool.obj 2>&1 | Select-String "$arg1" | %{$_.Line} >> $LOG
+	& $exit_func $PMEMPOOL feature -e $arg1 $POOLSET 2>&1 | Select-String "$arg1" | %{$_.Line} >> $LOG
 	if ( "x$arg2" -ne "xno-query" ){
 		pmempool_feature_query $arg1
 	}
@@ -62,7 +65,7 @@ function pmempool_feature_enable($arg1, $arg2) {
 #
 # usage: pmempool_feature_disable <feature> [no-query]
 function pmempool_feature_disable($arg1, $arg2) {
-	& $exit_func $PMEMPOOL feature -d $arg1 $DIR\pool.obj 2>&1 | Select-String "$arg1" | %{$_.Line} >> $LOG
+	& $exit_func $PMEMPOOL feature -d $arg1 $POOLSET 2>&1 | Select-String "$arg1" | %{$_.Line} >> $LOG
 	if ( "x$arg2" -ne "xno-query" ){
 		pmempool_feature_query $arg1
 	}
@@ -70,8 +73,14 @@ function pmempool_feature_disable($arg1, $arg2) {
 
 # pmempool_feature_test -- misc scenarios for each feature value
 function pmempool_feature_test($arg1) {
+	# create poolset
+	create_poolset $POOLSET `
+		${PART_SIZE_STR}:$DIR\testfile11:x ${PART_SIZE_STR}:$DIR\testfile12:x `
+		R ${PART_SIZE_STR}:$DIR\testfile21:x ${PART_SIZE_STR}:$DIR\testfile22:x `
+		R ${PART_SIZE_STR}:$DIR\testfile31:x
+
 	# create pool
-	expect_normal_exit $PMEMPOOL create obj $DIR\pool.obj
+	expect_normal_exit $PMEMPOOL create obj $POOLSET 
 
 	switch($arg1)
 	{

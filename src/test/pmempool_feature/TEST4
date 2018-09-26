@@ -31,7 +31,7 @@
 # OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #
 #
-# pmempool_feature/TEST1 -- unit test for pmempool_feature_chcksum_2k
+# pmempool_feature/TEST1 -- unit test (memcheck) for CKSUM_2K
 #
 
 . ../unittest/unittest.sh

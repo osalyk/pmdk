@@ -30,7 +30,7 @@
 # OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #
 #
-# pmempool_feature/TEST2 -- unit test for pmempool_feature_shutdown_state
+# pmempool_feature/TEST2 -- unit test for SHUTDOWN_STATE
 #
 
 . ..\unittest\unittest.ps1
