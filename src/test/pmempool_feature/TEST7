@@ -40,11 +40,11 @@ require_test_type medium
 
 require_fs_type any
 
-configure_valgrind force-disable
+configure_valgrind pmemcheck force-enable $PMEMPOOL$EXESUFFIX
 
 setup
 . ./common.sh
-
+TRACE="cgdb --args"
 pmempool_feature_test "CKSUM_2K"
 
 check

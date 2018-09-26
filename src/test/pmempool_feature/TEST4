@@ -40,7 +40,7 @@ require_test_type medium
 
 require_fs_type any
 
-configure_valgrind force-disable
+configure_valgrind memcheck force-enable $PMEMPOOL$EXESUFFIX
 
 setup
 . ./common.sh

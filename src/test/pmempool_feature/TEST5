@@ -31,7 +31,7 @@
 # OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #
 #
-# pmempool_feature/TEST1 -- unit test for pmempool_feature_chcksum_2k
+# pmempool_feature/TEST2 -- unit test for pmempool_feature_shutdown_state
 #
 
 . ../unittest/unittest.sh
@@ -40,12 +40,12 @@ require_test_type medium
 
 require_fs_type any
 
-configure_valgrind force-disable
+configure_valgrind memcheck force-enable $PMEMPOOL$EXESUFFIX
 
 setup
 . ./common.sh
 
-pmempool_feature_test "CKSUM_2K"
+pmempool_feature_test "SHUTDOWN_STATE"
 
 check
 
