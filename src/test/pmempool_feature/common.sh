@@ -77,11 +77,11 @@ function pmempool_feature_test() {
 	create_poolset $POOLSET \
 		$PART_SIZE:$DIR/testfile11:x \
 		$PART_SIZE:$DIR/testfile12:x \
-	r \
-	$PART_SIZE:$DIR/testfile21:x \
-	$PART_SIZE:$DIR/testfile22:x \
-	r \
-	$PART_SIZE:$DIR/testfile31:x
+		r \
+		$PART_SIZE:$DIR/testfile21:x \
+		$PART_SIZE:$DIR/testfile22:x \
+		r \
+		$PART_SIZE:$DIR/testfile31:x
 
 	# create pool
 	expect_normal_exit $PMEMPOOL$EXESUFFIX create obj $POOLSET
