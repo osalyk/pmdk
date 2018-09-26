@@ -36,7 +36,8 @@
 #
 # for feature values please see: pmempool feature help
 
-MIN_POOL=$((10 * 1024 * 1024)) # 4MiB
+PART_SIZE=$((10 * 1024 * 1024)) # 10MiB
+POOLSET=$DIR/testset
 
 LOG=grep${UNITTEST_NUM}.log
 
@@ -46,7 +47,7 @@ exit_func=expect_normal_exit
 #
 # usage: pmempool_feature_query <feature>
 function pmempool_feature_query() {
-	val=$(expect_normal_exit $PMEMPOOL$EXESUFFIX feature -q $1 $DIR/pool.obj)
+	val=$(expect_normal_exit $PMEMPOOL$EXESUFFIX feature -q $1 $POOLSET)
 	echo "query $1 result is $val" &>> $LOG
 }
 
@@ -54,7 +55,7 @@ function pmempool_feature_query() {
 #
 # usage: pmempool_feature_enable <feature> [no-query]
 function pmempool_feature_enable() {
-	$exit_func $PMEMPOOL$EXESUFFIX feature -e $1 $DIR/pool.obj &>> $LOG
+	$exit_func $PMEMPOOL$EXESUFFIX feature -e $1 $POOLSET &>> $LOG
 	if [ "x$2" != "xno-query" ]; then
 		pmempool_feature_query $1
 	fi
@@ -64,7 +65,7 @@ function pmempool_feature_enable() {
 #
 # usage: pmempool_feature_disable <feature> [no-query]
 function pmempool_feature_disable() {
-	$exit_func $PMEMPOOL$EXESUFFIX feature -d $1 $DIR/pool.obj &>> $LOG
+	$exit_func $PMEMPOOL$EXESUFFIX feature -d $1 $POOLSET &>> $LOG
 	if [ "x$2" != "xno-query" ]; then
 		pmempool_feature_query $1
 	fi
@@ -73,11 +74,17 @@ function pmempool_feature_disable() {
 # pmempool_feature_test -- misc scenarios for each feature value
 function pmempool_feature_test() {
 	# create poolset
-	create_poolset $DIR/testset1 $MIN_POOL:$DIR/testfile11:x $MIN_POOL:$DIR/testfile21:x \
-	r $MIN_POOL:$DIR/testfile31:x $MIN_POOL:$DIR/testfile41:x r $MIN_POOL:$DIR/testfile51:x
-	
+	create_poolset $POOLSET \
+		$PART_SIZE:$DIR/testfile11:x \
+		$PART_SIZE:$DIR/testfile12:x \
+		r \
+		$PART_SIZE:$DIR/testfile21:x \
+		$PART_SIZE:$DIR/testfile22:x \
+		r \
+		$PART_SIZE:$DIR/testfile31:x
+
 	# create pool
-	expect_normal_exit $PMEMPOOL$EXESUFFIX create obj $DIR/testset1
+	expect_normal_exit $PMEMPOOL$EXESUFFIX create obj $POOLSET
 
 	case "$1" in
 	"SINGLEHDR")
