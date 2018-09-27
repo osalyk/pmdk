@@ -96,6 +96,7 @@ function pmempool_feature_create_poolset() {
 # pmempool_feature_test -- misc scenarios for each feature value
 function pmempool_feature_test() {
 	# create pool
+	expect_normal_exit $PMEMPOOL$EXESUFFIX rm $POOLSET
 	expect_normal_exit $PMEMPOOL$EXESUFFIX create obj $POOLSET
 
 	case "$1" in
