@@ -37,7 +37,6 @@
 . ../unittest/unittest.sh
 
 require_test_type medium
-
 require_fs_type any
 
 configure_valgrind force-disable
@@ -45,6 +44,7 @@ configure_valgrind force-disable
 setup
 . ./common.sh
 
+pmempool_feature_create_poolset "no_dax_device"
 pmempool_feature_test "SINGLEHDR"
 
 check

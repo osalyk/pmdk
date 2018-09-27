@@ -71,18 +71,30 @@ function pmempool_feature_disable() {
 	fi
 }
 
+# pmempool_feature_create_poolset -- create poolset
+#
+# usage: pmempool_feature_create_poolset <poolset-type>
+function pmempool_feature_create_poolset() {
+	case "$1" in
+	"no_dax_device")
+		create_poolset $POOLSET \
+			$PART_SIZE:$DIR/testfile11:x \
+			$PART_SIZE:$DIR/testfile12:x \
+			r \
+			$PART_SIZE:$DIR/testfile21:x \
+			$PART_SIZE:$DIR/testfile22:x \
+			r \
+			$PART_SIZE:$DIR/testfile31:x
+			;;
+	"dax_device")
+		create_poolset $POOLSET \
+			AUTO:$DEVICE_DAX_PATH
+			;;
+	esac
+}
+
 # pmempool_feature_test -- misc scenarios for each feature value
 function pmempool_feature_test() {
-	# create poolset
-	create_poolset $POOLSET \
-		$PART_SIZE:$DIR/testfile11:x \
-		$PART_SIZE:$DIR/testfile12:x \
-		r \
-		$PART_SIZE:$DIR/testfile21:x \
-		$PART_SIZE:$DIR/testfile22:x \
-		r \
-		$PART_SIZE:$DIR/testfile31:x
-
 	# create pool
 	expect_normal_exit $PMEMPOOL$EXESUFFIX create obj $POOLSET
 
