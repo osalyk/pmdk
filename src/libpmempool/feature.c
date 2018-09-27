@@ -41,6 +41,7 @@
 #include <sys/mman.h>
 
 #include "libpmempool.h"
+#include "util_pmem.h"
 #include "pool.h"
 
 #define RW	0
@@ -206,8 +207,10 @@ set_hdr(struct pool_set *set, unsigned rep, unsigned part, struct pool_hdr *src)
 	util_checksum(src, sizeof(*src), &src->checksum, 1, skip_off);
 
 	/* write header */
-	struct pool_hdr *dst = HDR(REP(set, rep), part);
+	struct pool_replica *replica = REP(set, rep);
+	struct pool_hdr *dst = HDR(replica, part);
 	memcpy(dst, src, sizeof(*src));
+	util_persist_auto(PART(replica, part)->is_dev_dax, dst, sizeof(*src));
 }
 
 #define FEATURE_IS_ENABLED(set, feature) \

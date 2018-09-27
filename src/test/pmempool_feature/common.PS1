@@ -80,7 +80,7 @@ function pmempool_feature_test($arg1) {
 		R ${PART_SIZE_STR}:$DIR\testfile31:x
 
 	# create pool
-	expect_normal_exit $PMEMPOOL create obj $POOLSET 
+	expect_normal_exit $PMEMPOOL create obj $POOLSET
 
 	switch($arg1)
 	{
