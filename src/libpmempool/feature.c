@@ -99,6 +99,19 @@ incompat_features_check(uint32_t *incompat_features, struct pool_hdr *hdrp)
 }
 
 /*
+ * get_pool_open_flags -- (internal) generate pool open flags
+ */
+static inline unsigned
+get_pool_open_flags(struct pool_set *set, int rdonly)
+{
+	unsigned flags = 0;
+	if (rdonly == RDONLY && !util_pool_has_device_dax(set))
+		flags = POOL_OPEN_COW;
+	flags |= POOL_OPEN_IGNORE_BAD_BLOCKS;
+	return flags;
+}
+
+/*
  * get_mmap_flags -- (internal) generate mmap flags
  */
 static inline int
@@ -127,8 +140,7 @@ poolset_open(const char *path, int rdonly)
 	}
 
 	/* open a memory pool */
-	unsigned flags = (rdonly ? POOL_OPEN_COW : 0) |
-			POOL_OPEN_IGNORE_BAD_BLOCKS;
+	unsigned flags = get_pool_open_flags(set, rdonly);
 	if (util_pool_open_nocheck(set, flags))
 		goto err_open;
 
