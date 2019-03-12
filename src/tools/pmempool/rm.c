@@ -1,5 +1,5 @@
 /*
- * Copyright 2014-2018, Intel Corporation
+ * Copyright 2014-2019, Intel Corporation
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -41,6 +41,7 @@
 #include <stdio.h>
 #include <fcntl.h>
 
+#include "librpmem.h"
 #include "os.h"
 #include "out.h"
 #include "common.h"
@@ -48,10 +49,6 @@
 #include "file.h"
 #include "rm.h"
 #include "set.h"
-
-#ifdef USE_RPMEM
-#include "librpmem.h"
-#endif
 
 enum ask_type {
 	ASK_SOMETIMES,	/* ask before removing write-protected files */
@@ -73,6 +70,8 @@ static int rm_poolset_mode;
 static enum ask_type ask_mode;
 /* indicates whether librpmem is available */
 static int rpmem_avail;
+
+#define POOL_SIZE	(32 * 1024 * 1024)
 
 /* help message */
 static const char * const help_str =
@@ -151,6 +150,8 @@ rm_file(const char *file)
 	char ans = ask_Yn(cask, "remove %sfile '%s' ?", pre_msg, file);
 	if (ans == 'y') {
 		if (util_unlink(file)) {
+			if (force)
+				return 0;
 			outv_err("cannot remove file '%s'", file);
 			return 1;
 		}
@@ -242,35 +243,84 @@ static int
 rm_poolset_cb(struct part_file *pf, void *arg)
 {
 	int *error = (int *)arg;
-	int ret;
+	int ret = 0;
 	if (pf->is_remote) {
 		ret = remove_remote(pf->remote->node_addr,
 					pf->remote->pool_desc);
+	} else {
+		const char *part_file = pf->part->path;
+		ret = rm_file(part_file);
+	}
+
+	if (ret)
+		*error = ret;
+
+	return 0;
+}
+
+static void *
+alloc_memory()
+{
+	size_t pagesize = (size_t)sysconf(_SC_PAGESIZE);
+	if (pagesize < 0) {
+		perror("sysconf");
+		exit(1);
+	}
+
+	/* allocate a page size aligned local memory pool */
+	void *mem;
+	int ret = posix_memalign(&mem, pagesize, POOL_SIZE);
+	if (ret) {
+		fprintf(stderr, "posix_memalign: %s\n", strerror(ret));
+		exit(1);
+	}
+
+	return mem;
+}
+
+/*
+ * rm_poolset_parts_exist -- (internal) checks if given pool exists
+ */
+static int
+rm_poolset_parts_exist(struct part_file *pf, void *arg)
+{
+	unsigned nlanes = 1;
+	struct rpmem_pool_attr pool_attr;
+	int *error = (int *)arg;
+	int ret = 0;
+	if (pf->is_remote) {
+		void *pool = alloc_memory();
+		if (!pool)
+			exit(1);
+
+		RPMEMpool *rpp = rpmem_open(pf->remote->node_addr,
+				pf->remote->pool_desc, pool, POOL_SIZE,
+				&nlanes, &pool_attr);
+		if (!rpp) {
+			outv(2, "cannot open remote file: '%p'", pool);
+			ret = 1;
+		} else {
+		rpmem_close(rpp);
+		return 0;
+		}
 	} else {
 		const char *part_file = pf->part->path;
 
 		outv(2, "part file   : %s\n", part_file);
 
 		int exists = util_file_exists(part_file);
-		if (exists < 0)
+		if (exists < 0) {
 			ret = 1;
-		else if (!exists) {
-			/*
-			 * Ignore not accessible file if force
-			 * flag is set.
-			 */
-			if (force)
-				return 0;
-
+		} else if (!exists) {
 			ret = 1;
-			outv_err("!cannot remove file '%s'", part_file);
-		} else {
-			ret = rm_file(part_file);
+			outv_err("!cannot open file '%s'", part_file);
 		}
 	}
 
-	if (ret)
+	if (ret) {
 		*error = ret;
+		return ret;
+	}
 
 	return 0;
 }
@@ -282,13 +332,20 @@ static int
 rm_poolset(const char *file)
 {
 	int error = 0;
-	int ret = util_poolset_foreach_part(file, rm_poolset_cb, &error);
+	int ret = 0;
+
+	if (!force)
+		ret = util_poolset_foreach_part(file,
+				rm_poolset_parts_exist, &error);
+
+	if (ret == 0)
+		ret = util_poolset_foreach_part(file, rm_poolset_cb, &error);
+
 	if (ret == -1) {
 		outv_err("parsing poolset failed: %s\n",
 				out_get_errormsg());
 		return ret;
 	}
-
 	if (error && !force) {
 		outv_err("!removing '%s' failed\n", file);
 		return error;
