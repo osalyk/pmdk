@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 #
-# Copyright 2016-2019, Intel Corporation
+# Copyright 2019, Intel Corporation
 #
 # Redistribution and use in source and binary forms, with or without
 # modification, are permitted provided that the following conditions
@@ -30,29 +30,30 @@
 # (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
 # OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #
+
 #
-# pmempool_sync_remote/TEST1 -- pmempool sync with remote replication
+# src/test/tools/pmemspoil.sh -- pmemspoil helper
 #
 
-. ../unittest/unittest.sh
+pool=$1
+op=$2
 
-require_test_type medium
-require_fs_type any
-
-. common.sh
-
-configure_poolsets 1 1
-
-dump_info_log 1 1 ${NODE_DIR[1]}$POOLSET_LOCAL before.1.log
-
-expect_normal_exit run_on_node 1 rm ${NODE_DIR[1]}pool.part.1
-expect_normal_exit run_on_node 1 ../pmemspoil.sh ${NODE_DIR[1]}pool.0.part.1 \
-	"hdr_inv_checksum"
-expect_normal_exit run_on_node 1 ../pmempool sync ${NODE_DIR[1]}$POOLSET_LOCAL
-dump_info_log 1 1 ${NODE_DIR[1]}$POOLSET_LOCAL after.1.1.log
-
-diff_log 1 before.1.log after.1.1.log
-
-expect_normal_exit run_on_node 1 ../pmempool sync ${NODE_DIR[1]}$POOLSET_LOCAL
-
-pass
+case "$op" in
+	hdr_inv_signature_and_checksum_gen)
+		../pmemspoil $pool pool_hdr.signature=ERROR "pool_hdr.checksum_gen()"
+		;;
+	hdr_inv_checksum)
+		../pmemspoil $pool pool_hdr.checksum=0
+		;;
+	sds_dirty)
+		../pmemspoil $pool pool_hdr.shutdown_state.usc=999 \
+				   pool_hdr.shutdown_state.dirty=1 \
+				   "pool_hdr.shutdown_state.checksum_gen()" \
+				   pool_hdr.features.incompat=0x0006 \
+				   "pool_hdr.checksum_gen()"
+		;;
+	hdr_enable_sds_and_checksum_gen)
+		../pmemspoil $pool pool_hdr.features.incompat=0x0006 \
+				   "pool_hdr.checksum_gen()"
+		;;
+esac
