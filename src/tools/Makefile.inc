@@ -191,6 +191,12 @@ STATIC_DEBUG_LIBS += $(LIBSDIR_DEBUG)/libpmem.a
 STATIC_NONDEBUG_LIBS += $(LIBSDIR_NONDEBUG)/libpmem.a
 endif
 
+ifeq ($(LIBRPMEM),y)
+LIBS += $(shell $(PKG_CONFIG) --libs libfabric)
+CFLAGS += $(shell $(PKG_CONFIG) --cflags libfabric)
+LIBS += -lrpmem
+endif
+
 ifeq ($(LIBVMEM),y)
 DYNAMIC_LIBS += -lvmem
 STATIC_DEBUG_LIBS += $(LIBSDIR_DEBUG)/libvmem.a

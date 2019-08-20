@@ -1,4 +1,4 @@
-# Copyright 2014-2018, Intel Corporation
+# Copyright 2014-2019, Intel Corporation
 #
 # Redistribution and use in source and binary forms, with or without
 # modification, are permitted provided that the following conditions
@@ -44,6 +44,7 @@ OBJS = pmempool.o\
        rpmem_ssh.o rpmem_cmd.o rpmem_util.o rpmem_common.o feature.o
 
 LIBPMEM=y
+LIBRPMEM=y
 LIBPMEMBLK=y
 LIBPMEMOBJ=y
 LIBPMEMLOG=y
