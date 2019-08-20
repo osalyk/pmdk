@@ -71,8 +71,6 @@ static enum ask_type ask_mode;
 /* indicates whether librpmem is available */
 static int rpmem_avail;
 
-#define POOL_SIZE	(32 * 1024 * 1024)
-
 /* help message */
 static const char * const help_str =
 "Remove pool file or all files from poolset\n"
@@ -258,18 +256,15 @@ rm_poolset_cb(struct part_file *pf, void *arg)
 	return 0;
 }
 
+/* XXX: replace with real size of the poolset */
+#define POOL_SIZE (32 * 1024 * 1024)
+
 static void *
 alloc_memory()
 {
-	size_t pagesize = (size_t)sysconf(_SC_PAGESIZE);
-	if (pagesize < 0) {
-		perror("sysconf");
-		exit(1);
-	}
-
 	/* allocate a page size aligned local memory pool */
 	void *mem;
-	int ret = posix_memalign(&mem, pagesize, POOL_SIZE);
+	int ret = posix_memalign(&mem, Pagesize, POOL_SIZE);
 	if (ret) {
 		fprintf(stderr, "posix_memalign: %s\n", strerror(ret));
 		exit(1);
@@ -279,16 +274,18 @@ alloc_memory()
 }
 
 /*
- * rm_poolset_parts_exist -- (internal) checks if given pool exists
+ * poolset_parts_exist -- (internal) checks if given pool exists
  */
 static int
-rm_poolset_parts_exist(struct part_file *pf, void *arg)
+poolset_parts_exist(struct part_file *pf, void *arg)
 {
-	unsigned nlanes = 1;
-	struct rpmem_pool_attr pool_attr;
 	int *error = (int *)arg;
 	int ret = 0;
 	if (pf->is_remote) {
+#ifdef USE_RPMEM
+		struct rpmem_pool_attr pool_attr;
+		unsigned nlanes = 1;
+
 		void *pool = alloc_memory();
 		if (!pool)
 			exit(1);
@@ -300,9 +297,13 @@ rm_poolset_parts_exist(struct part_file *pf, void *arg)
 			outv(2, "cannot open remote file: '%p'", pool);
 			ret = 1;
 		} else {
-		rpmem_close(rpp);
-		return 0;
+			rpmem_close(rpp);
 		}
+		free(pool);
+#else
+		outv_err("remote replication not supported");
+		return 1;
+#endif
 	} else {
 		const char *part_file = pf->part->path;
 
@@ -334,9 +335,10 @@ rm_poolset(const char *file)
 	int error = 0;
 	int ret = 0;
 
-	if (!force)
-		ret = util_poolset_foreach_part(file,
-				rm_poolset_parts_exist, &error);
+	if (!force) {
+		ret = util_poolset_foreach_part(file, poolset_parts_exist,
+				&error);
+	}
 
 	if (ret == 0)
 		ret = util_poolset_foreach_part(file, rm_poolset_cb, &error);
