@@ -36,6 +36,7 @@
 
 #include <errno.h>
 #include <stdlib.h>
+#include <sys/mman.h>
 
 #include "libpmem2.h"
 #include "map.h"
@@ -54,11 +55,23 @@ pmem2_persist_init(void)
 {
 	Info.memmove_nodrain = NULL;
 	Info.memset_nodrain = NULL;
+	Info.memmove_nodrain_eadr = NULL;
+	Info.memset_nodrain_eadr = NULL;
 	Info.flush = NULL;
 	Info.fence = NULL;
 	Info.flush_has_builtin_fence = 0;
 
 	pmem2_arch_init(&Info);
+
+	if (Info.memmove_nodrain == NULL) {
+		Info.memmove_nodrain = memmove_nodrain_generic;
+		LOG(3, "using generic memmove");
+	}
+
+	if (Info.memset_nodrain == NULL) {
+		Info.memset_nodrain = memset_nodrain_generic;
+		LOG(3, "using generic memset");
+	}
 }
 
 /*
@@ -293,4 +306,101 @@ pmem2_drain_fn
 pmem2_get_drain_fn(struct pmem2_map *map)
 {
 	return map->drain_fn;
+}
+
+static void *
+pmem2_memmove(void *pmemdest, const void *src, size_t len,
+		unsigned flags)
+{
+	Info.memmove_nodrain(pmemdest, src, len, flags, Info.flush);
+	if ((flags & (PMEM2_F_MEM_NODRAIN | PMEM2_F_MEM_NOFLUSH)) == 0)
+		pmem2_drain();
+
+	return pmemdest;
+}
+
+static void *
+pmem2_memset(void *pmemdest, int c, size_t len, unsigned flags)
+{
+	Info.memset_nodrain(pmemdest, c, len, flags, Info.flush);
+	if ((flags & (PMEM2_F_MEM_NODRAIN | PMEM2_F_MEM_NOFLUSH)) == 0)
+		pmem2_drain();
+
+	return pmemdest;
+}
+
+static void *
+pmem2_memmove_eadr(void *pmemdest, const void *src, size_t len,
+		unsigned flags)
+{
+	Info.memmove_nodrain_eadr(pmemdest, src, len, flags, Info.flush);
+	if ((flags & (PMEM2_F_MEM_NODRAIN | PMEM2_F_MEM_NOFLUSH)) == 0)
+		pmem2_drain();
+
+	return pmemdest;
+}
+
+static void *
+pmem2_memset_eadr(void *pmemdest, int c, size_t len, unsigned flags)
+{
+	Info.memset_nodrain_eadr(pmemdest, c, len, flags, Info.flush);
+	if ((flags & (PMEM2_F_MEM_NODRAIN | PMEM2_F_MEM_NOFLUSH)) == 0)
+		pmem2_drain();
+
+	return pmemdest;
+}
+
+/*
+ * pmem2_set_mem_fns --
+ */
+void
+pmem2_set_mem_fns(struct pmem2_map *map)
+{
+	switch (map->effective_granularity) {
+		case PMEM2_GRANULARITY_PAGE:
+			map->memmove_fn = NULL;
+			map->memcpy_fn = NULL;
+			map->memset_fn = NULL;
+			break;
+		case PMEM2_GRANULARITY_CACHE_LINE:
+			map->memmove_fn = pmem2_memmove;
+			map->memcpy_fn = pmem2_memmove;
+			map->memset_fn = pmem2_memset;
+			break;
+		case PMEM2_GRANULARITY_BYTE:
+			map->memmove_fn = pmem2_memmove_eadr;
+			map->memcpy_fn = pmem2_memmove_eadr;
+			map->memset_fn = pmem2_memset_eadr;
+			break;
+		default:
+			abort();
+	}
+
+}
+
+/*
+ * pmem2_get_memmove_fn - return a pointer to a function
+ */
+pmem2_memmove_fn
+pmem2_get_memmove_fn(struct pmem2_map *map)
+{
+	return map->memmove_fn;
+}
+
+/*
+ * pmem2_get_memcpy_fn - return a pointer to a function
+ */
+pmem2_memcpy_fn
+pmem2_get_memcpy_fn(struct pmem2_map *map)
+{
+	return map->memcpy_fn;
+}
+
+/*
+ * pmem2_get_memset_fn - return a pointer to a function
+ */
+pmem2_memset_fn
+pmem2_get_memset_fn(struct pmem2_map *map)
+{
+	return map->memset_fn;
 }
