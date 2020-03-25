@@ -29,7 +29,6 @@
     <ClCompile Include="memops_generic.c" />
     <ClCompile Include="persist.c" />
     <ClCompile Include="persist_windows.c" />
-    <ClCompile Include="pmem2.c" />
     <ClCompile Include="pmem2_utils.c" />
     <ClCompile Include="source.c" />
     <ClCompile Include="source_windows.c" />
