@@ -121,6 +121,27 @@ pmem2_source_size(const struct pmem2_source *src, size_t *size)
 }
 
 /*
+* pmem2_source_size -- get a size of the file handle stored in the provided
+* source
+*/
+int
+pmem2_source_mode(const struct pmem2_source *src, DWORD *basicInfo)
+{
+	LOG(3, "handle %p", src->handle);
+
+	BY_HANDLE_FILE_INFORMATION info;
+	int ret = pmem2_win_stat(src->handle, &info);
+	if (ret)
+		return ret;
+
+	if (info.dwFileAttributes & FILE_ATTRIBUTE_READONLY)
+		exit(0);
+
+	*basicInfo = (DWORD)info.dwFileAttributes;
+	return 0;
+}
+
+/*
  * pmem2_source_alignment -- get alignment from the system info
  */
 int
