@@ -50,6 +50,6 @@ class TEST3(PMEM2_MAP_PROT):
 @t.require_valgrind_disabled('memcheck')
 class TEST4(PMEM2_MAP_PROT):
     """
-    NONE PROTECTION on file opened in read-write mode - should succeed
+    NONE protection on file opened in read-write mode - should succeed
     """
     test_case = "test_rw_mode_none_prot"
