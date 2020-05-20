@@ -18,6 +18,12 @@
 #include "ut_pmem2.h"
 #include "ut_fh.h"
 
+struct res {
+	struct FHandle *fh;
+	struct pmem2_config *cfg;
+	struct pmem2_source *src;
+};
+
 /*
  * prepare_config -- fill pmem2_config
  */
@@ -38,14 +44,20 @@ prepare_config(struct pmem2_config *cfg, struct pmem2_source **src,
 }
 
 /*
- * prepare_protection -- set access mode and protection flags
+ * res_prepare -- set access mode and protection flags
  */
 static void
-prepare_protection(struct pmem2_config *cfg, struct pmem2_source **src,
-	struct FHandle **fh, const char *file, int access, unsigned proto)
+res_prepare(const char *file, struct res *res, int access, unsigned proto)
 {
-	prepare_config(cfg, src, fh, file, access);
-	pmem2_config_set_protection(cfg, proto);
+	prepare_config(res->cfg, &res->src, &res->fh, file, access);
+	pmem2_config_set_protection(res->cfg, proto);
+}
+
+static void
+res_cleanup(struct res *res)
+{
+	PMEM2_SOURCE_DELETE(&res->src);
+	UT_FH_CLOSE(res->fh);
 }
 
 static const char *word1 = "Persistent or nonpersistent: this is the question.";
@@ -73,17 +85,14 @@ test_rw_mode_rw_prot(const struct test_case *tc,
 	if (argc < 1)
 		UT_FATAL("usage: test_rw_mode_rw_prot <file>");
 
-	char *file = argv[0];
-	struct FHandle *fh;
-	struct pmem2_config cfg;
-	struct pmem2_source *src;
+	struct res *res = malloc(sizeof(res));
 
 	/* read/write on file opened in read/write mode - should success */
-	prepare_protection(&cfg, &src, &fh, file, FH_RDWR,
+	res_prepare(argv[0], res, FH_RDWR,
 			PMEM2_PROT_READ | PMEM2_PROT_WRITE);
 
 	struct pmem2_map *map;
-	int ret = pmem2_map(&cfg, src, &map);
+	int ret = pmem2_map(res->cfg, res->src, &map);
 	UT_ASSERTeq(ret, 0);
 
 	pmem2_memcpy_fn memcpy_fn = pmem2_get_memcpy_fn(map);
@@ -92,8 +101,8 @@ test_rw_mode_rw_prot(const struct test_case *tc,
 	UT_ASSERTeq(memcmp(addr_map, word1, strlen(word1)), 0);
 
 	pmem2_unmap(&map);
-	PMEM2_SOURCE_DELETE(&src);
-	UT_FH_CLOSE(fh);
+	res_cleanup(res);
+	free(res);
 	return 1;
 }
 
@@ -108,21 +117,18 @@ test_r_mode_rw_prot(const struct test_case *tc,
 	if (argc < 1)
 		UT_FATAL("usage: test_r_mode_rw_prot <file>");
 
-	char *file = argv[0];
-	struct FHandle *fh;
-	struct pmem2_config cfg;
-	struct pmem2_source *src;
+	struct res *res = malloc(sizeof(res));
 
 	/* read/write on file opened in read-only mode - should fail */
-	prepare_protection(&cfg, &src, &fh, file, FH_READ,
+	res_prepare(argv[0], res, FH_READ,
 			PMEM2_PROT_READ | PMEM2_PROT_WRITE);
 
 	struct pmem2_map *map;
-	int ret = pmem2_map(&cfg, src, &map);
+	int ret = pmem2_map(res->cfg, res->src, &map);
 	UT_PMEM2_EXPECT_RETURN(ret, -EACCES);
 
-	PMEM2_SOURCE_DELETE(&src);
-	UT_FH_CLOSE(fh);
+	res_cleanup(res);
+	free(res);
 	return 1;
 }
 
@@ -145,16 +151,13 @@ test_rw_mode_r_prot(const struct test_case *tc,
 	v.sa_handler = signal_handler;
 	SIGACTION(SIGSEGV, &v, NULL);
 
-	char *file = argv[0];
-	struct FHandle *fh;
-	struct pmem2_config cfg;
-	struct pmem2_source *src;
+	struct res *res = malloc(sizeof(res));
 
 	/* read-only on file opened in read/write mode - should success */
-	prepare_protection(&cfg, &src, &fh, file, FH_RDWR, PMEM2_PROT_READ);
+	res_prepare(argv[0], res, FH_RDWR, PMEM2_PROT_READ);
 
 	struct pmem2_map *map;
-	int ret = pmem2_map(&cfg, src, &map);
+	int ret = pmem2_map(res->cfg, res->src, &map);
 	UT_ASSERTeq(ret, 0);
 
 	pmem2_memcpy_fn memcpy_fn = pmem2_get_memcpy_fn(map);
@@ -166,8 +169,8 @@ test_rw_mode_r_prot(const struct test_case *tc,
 	}
 
 	pmem2_unmap(&map);
-	PMEM2_SOURCE_DELETE(&src);
-	UT_FH_CLOSE(fh);
+	res_cleanup(res);
+	free(res);
 	signal(SIGSEGV, SIG_DFL);
 	return 1;
 }
@@ -191,16 +194,13 @@ test_r_mode_r_prot(const struct test_case *tc,
 	v.sa_handler = signal_handler;
 	SIGACTION(SIGSEGV, &v, NULL);
 
-	char *file = argv[0];
-	struct FHandle *fh;
-	struct pmem2_config cfg;
-	struct pmem2_source *src;
+	struct res *res = malloc(sizeof(res));
 
 	/* read-only on file opened in read-only mode - should succeed */
-	prepare_protection(&cfg, &src, &fh, file, FH_READ, PMEM2_PROT_READ);
+	res_prepare(argv[0], res, FH_READ, PMEM2_PROT_READ);
 
 	struct pmem2_map *map;
-	int ret = pmem2_map(&cfg, src, &map);
+	int ret = pmem2_map(res->cfg, res->src, &map);
 	UT_ASSERTeq(ret, 0);
 
 	pmem2_memcpy_fn memcpy_fn = pmem2_get_memcpy_fn(map);
@@ -212,8 +212,8 @@ test_r_mode_r_prot(const struct test_case *tc,
 	}
 
 	pmem2_unmap(&map);
-	PMEM2_SOURCE_DELETE(&src);
-	UT_FH_CLOSE(fh);
+	res_cleanup(res);
+	free(res);
 	signal(SIGSEGV, SIG_DFL);
 	return 1;
 }
@@ -237,16 +237,13 @@ test_rw_mode_none_prot(const struct test_case *tc,
 	v.sa_handler = signal_handler;
 	SIGACTION(SIGSEGV, &v, NULL);
 
-	char *file = argv[0];
-	struct FHandle *fh;
-	struct pmem2_config cfg;
-	struct pmem2_source *src;
+	struct res *res = malloc(sizeof(res));
 
 	/* none on file opened in read-only mode - should success */
-	prepare_protection(&cfg, &src, &fh, file, FH_READ, PMEM2_PROT_NONE);
+	res_prepare(argv[0], res, FH_READ, PMEM2_PROT_NONE);
 
 	struct pmem2_map *map;
-	int ret = pmem2_map(&cfg, src, &map);
+	int ret = pmem2_map(res->cfg, res->src, &map);
 	UT_ASSERTeq(ret, 0);
 
 	pmem2_memcpy_fn memcpy_fn = pmem2_get_memcpy_fn(map);
@@ -258,9 +255,8 @@ test_rw_mode_none_prot(const struct test_case *tc,
 	}
 
 	pmem2_unmap(&map);
-	FREE(map);
-	PMEM2_SOURCE_DELETE(&src);
-	UT_FH_CLOSE(fh);
+	res_cleanup(res);
+	free(res);
 	signal(SIGSEGV, SIG_DFL);
 	return 1;
 }
