@@ -20,7 +20,7 @@
 
 struct res {
 	struct FHandle *fh;
-	struct pmem2_config *cfg;
+	struct pmem2_config cfg;
 	struct pmem2_source *src;
 };
 
@@ -44,13 +44,13 @@ prepare_config(struct pmem2_config *cfg, struct pmem2_source **src,
 }
 
 /*
- res_prepare -- set access mode and protection flags
+ * res_prepare -- set access mode and protection flags
  */
 static void
 res_prepare(const char *file, struct res *res, int access, unsigned proto)
 {
-	prepare_config(res->cfg, &res->src, &res->fh, file, access);
-	pmem2_config_set_protection(res->cfg, proto);
+	prepare_config(&res->cfg, &res->src, &res->fh, file, access);
+	pmem2_config_set_protection(&res->cfg, proto);
 }
 
 static void
@@ -92,7 +92,7 @@ test_rw_mode_rw_prot(const struct test_case *tc,
 			PMEM2_PROT_READ | PMEM2_PROT_WRITE);
 
 	struct pmem2_map *map;
-	int ret = pmem2_map(res->cfg, res->src, &map);
+	int ret = pmem2_map(&res->cfg, res->src, &map);
 	UT_ASSERTeq(ret, 0);
 
 	pmem2_memcpy_fn memcpy_fn = pmem2_get_memcpy_fn(map);
@@ -124,7 +124,7 @@ test_r_mode_rw_prot(const struct test_case *tc,
 			PMEM2_PROT_READ | PMEM2_PROT_WRITE);
 
 	struct pmem2_map *map;
-	int ret = pmem2_map(res->cfg, res->src, &map);
+	int ret = pmem2_map(&res->cfg, res->src, &map);
 	UT_PMEM2_EXPECT_RETURN(ret, -EACCES);
 
 	res_cleanup(res);
@@ -157,7 +157,7 @@ test_rw_mode_r_prot(const struct test_case *tc,
 	res_prepare(argv[0], res, FH_RDWR, PMEM2_PROT_READ);
 
 	struct pmem2_map *map;
-	int ret = pmem2_map(res->cfg, res->src, &map);
+	int ret = pmem2_map(&res->cfg, res->src, &map);
 	UT_ASSERTeq(ret, 0);
 
 	pmem2_memcpy_fn memcpy_fn = pmem2_get_memcpy_fn(map);
@@ -200,7 +200,7 @@ test_r_mode_r_prot(const struct test_case *tc,
 	res_prepare(argv[0], res, FH_READ, PMEM2_PROT_READ);
 
 	struct pmem2_map *map;
-	int ret = pmem2_map(res->cfg, res->src, &map);
+	int ret = pmem2_map(&res->cfg, res->src, &map);
 	UT_ASSERTeq(ret, 0);
 
 	pmem2_memcpy_fn memcpy_fn = pmem2_get_memcpy_fn(map);
@@ -243,7 +243,7 @@ test_rw_mode_none_prot(const struct test_case *tc,
 	res_prepare(argv[0], res, FH_READ, PMEM2_PROT_NONE);
 
 	struct pmem2_map *map;
-	int ret = pmem2_map(res->cfg, res->src, &map);
+	int ret = pmem2_map(&res->cfg, res->src, &map);
 	UT_ASSERTeq(ret, 0);
 
 	pmem2_memcpy_fn memcpy_fn = pmem2_get_memcpy_fn(map);
