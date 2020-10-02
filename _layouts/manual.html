@@ -47,7 +47,7 @@
 		{% assign dc_title_ext_old =  dc_title | append:'.3.html' %}
 	{% endif %}
 
-	{% if dc_title == 'pmempool' or dc_title == 'poolset' or dc_title == 'rpmemd' or dc_title == 'daxio' or dc_title == 'pmreorder' or dc_title == 'pmem_ctl' %}
+	{% if dc_title == 'pmempool' or dc_title == 'poolset' or dc_title == 'rpma' or dc_title == 'rpmemd' or dc_title == 'daxio' or dc_title == 'pmreorder' or dc_title == 'pmem_ctl' %}
 		<!-- no libraries -->
 	{% else %}
 	<div id="shortcut">
@@ -55,7 +55,7 @@
 		{% for system in sys_array %}
 		<ul id="menu">
 			{% if system == "windows" %}
-				{% if dc_title == "librpmem" or dc_title == "rpmemd" or dc_title == "libvmmalloc" or dc_title == "daxio" or dc_title == 'pmreorder' %}
+				{% if dc_title == "librpmem" or dc_title == "rpma" or dc_title == "rpmemd" or dc_title == "libvmmalloc" or dc_title == "daxio" or dc_title == 'pmreorder' %}
 					<!-- skip Linux-only components -->
 				{% else %}
 					<li class="sys_header"><a href="#">{{ system | upcase }}</a></li>
