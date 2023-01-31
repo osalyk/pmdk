@@ -1,5 +1,5 @@
 /* SPDX-License-Identifier: BSD-3-Clause */
-/* Copyright 2019-2022, Intel Corporation */
+/* Copyright 2019-2023, Intel Corporation */
 
 /*
  * libpmem2.h -- definitions of libpmem2 entry points
@@ -16,20 +16,6 @@
 
 #include <stddef.h>
 #include <stdint.h>
-#ifdef _WIN32
-#include <pmemcompat.h>
-
-#ifndef PMDK_UTF8_API
-#define pmem2_source_device_id pmem2_source_device_idW
-#define pmem2_errormsg pmem2_errormsgW
-#define pmem2_perror pmem2_perrorW
-#else
-#define pmem2_source_device_id pmem2_source_device_idU
-#define pmem2_errormsg pmem2_errormsgU
-#define pmem2_perror pmem2_perrorU
-#endif
-
-#endif
 
 #ifdef __cplusplus
 extern "C" {
@@ -79,12 +65,7 @@ struct pmem2_source;
 
 int pmem2_source_from_fd(struct pmem2_source **src, int fd);
 int pmem2_source_from_anon(struct pmem2_source **src, size_t size);
-#ifdef _WIN32
-int pmem2_source_from_handle(struct pmem2_source **src, HANDLE handle);
-int pmem2_source_get_handle(const struct pmem2_source *src, HANDLE *h);
-#else
 int pmem2_source_get_fd(const struct pmem2_source *src, int *fd);
-#endif
 
 int pmem2_source_size(const struct pmem2_source *src, size_t *size);
 
@@ -240,16 +221,8 @@ pmem2_memset_fn pmem2_get_memset_fn(struct pmem2_map *map);
 
 int pmem2_deep_flush(struct pmem2_map *map, void *ptr, size_t size);
 
-#ifndef _WIN32
 int pmem2_source_device_id(const struct pmem2_source *src,
 	char *id, size_t *len);
-#else
-int pmem2_source_device_idW(const struct pmem2_source *src,
-	wchar_t *id, size_t *len);
-
-int pmem2_source_device_idU(const struct pmem2_source *src,
-	char *id, size_t *len);
-#endif
 
 int pmem2_source_device_usc(const struct pmem2_source *src, uint64_t *usc);
 
@@ -276,24 +249,12 @@ int pmem2_badblock_clear(struct pmem2_badblock_context *bbctx,
 
 /* error handling */
 
-#ifndef _WIN32
 const char *pmem2_errormsg(void);
-#else
-const char *pmem2_errormsgU(void);
-
-const wchar_t *pmem2_errormsgW(void);
-#endif
 
 int pmem2_err_to_errno(int);
 
-#ifndef _WIN32
 void pmem2_perror(const char *format,
 	...) __attribute__((__format__(__printf__, 1, 2)));
-#else
-void pmem2_perrorU(const char *format, ...);
-
-void pmem2_perrorW(const wchar_t *format, ...);
-#endif
 
 #ifdef __cplusplus
 }

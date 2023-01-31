@@ -1,5 +1,5 @@
 /* SPDX-License-Identifier: BSD-3-Clause */
-/* Copyright 2014-2020, Intel Corporation */
+/* Copyright 2014-2023, Intel Corporation */
 
 /*
  * libpmemobj/base.h -- definitions of base libpmemobj entry points
@@ -14,19 +14,6 @@
 
 #include <stddef.h>
 #include <stdint.h>
-
-#ifdef _WIN32
-#include <pmemcompat.h>
-
-#ifndef PMDK_UTF8_API
-#define pmemobj_check_version pmemobj_check_versionW
-#define pmemobj_errormsg pmemobj_errormsgW
-#else
-#define pmemobj_check_version pmemobj_check_versionU
-#define pmemobj_errormsg pmemobj_errormsgU
-#endif
-
-#endif
 
 #ifdef __cplusplus
 extern "C" {
@@ -96,8 +83,6 @@ static const PMEMoid OID_NULL = { 0, 0 };
 PMEMobjpool *pmemobj_pool_by_ptr(const void *addr);
 PMEMobjpool *pmemobj_pool_by_oid(PMEMoid oid);
 
-#ifndef _WIN32
-
 extern int _pobj_cache_invalidate;
 extern __thread struct _pobj_pcache {
 	PMEMobjpool *pop;
@@ -130,13 +115,10 @@ pmemobj_direct_inline(PMEMoid oid)
 	return (void *)((uintptr_t)cache->pop + oid.off);
 }
 
-#endif /* _WIN32 */
-
 /*
  * Returns the direct pointer of an object.
  */
-#if defined(_WIN32) || defined(_PMEMOBJ_INTRNL) ||\
-	defined(PMEMOBJ_DIRECT_NON_INLINE)
+#if defined(_PMEMOBJ_INTRNL) || defined(PMEMOBJ_DIRECT_NON_INLINE)
 void *pmemobj_direct(PMEMoid oid);
 #else
 #define pmemobj_direct pmemobj_direct_inline
@@ -258,15 +240,8 @@ void pmemobj_drain(PMEMobjpool *pop);
 #define PMEMOBJ_MAJOR_VERSION 2
 #define PMEMOBJ_MINOR_VERSION 4
 
-#ifndef _WIN32
 const char *pmemobj_check_version(unsigned major_required,
 	unsigned minor_required);
-#else
-const char *pmemobj_check_versionU(unsigned major_required,
-	unsigned minor_required);
-const wchar_t *pmemobj_check_versionW(unsigned major_required,
-	unsigned minor_required);
-#endif
 
 /*
  * Passing NULL to pmemobj_set_funcs() tells libpmemobj to continue to use the
@@ -286,12 +261,7 @@ typedef int (*pmemobj_constr)(PMEMobjpool *pop, void *ptr, void *arg);
  */
 void _pobj_debug_notice(const char *func_name, const char *file, int line);
 
-#ifndef _WIN32
 const char *pmemobj_errormsg(void);
-#else
-const char *pmemobj_errormsgU(void);
-const wchar_t *pmemobj_errormsgW(void);
-#endif
 
 #ifdef __cplusplus
 }
