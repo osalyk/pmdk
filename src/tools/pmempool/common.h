@@ -1,5 +1,5 @@
 /* SPDX-License-Identifier: BSD-3-Clause */
-/* Copyright 2014-2020, Intel Corporation */
+/* Copyright 2014-2023, Intel Corporation */
 
 /*
  * common.h -- declarations of common functions
@@ -26,11 +26,6 @@
 #include "heap.h"
 #include "btt_layout.h"
 #include "page_size.h"
-
-/* XXX - modify Linux makefiles to generate srcversion.h and remove #ifdef */
-#ifdef _WIN32
-#include "srcversion.h"
-#endif
 
 #define COUNT_OF(x) (sizeof(x) / sizeof(0[x]))
 
