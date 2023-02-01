@@ -1,11 +1,8 @@
 // SPDX-License-Identifier: BSD-3-Clause
-/* Copyright 2022, Intel Corporation */
+/* Copyright 2022-2023, Intel Corporation */
 
 /* disable conditional expression is const warning */
 #include "core/util.h"
-#ifdef _WIN32
-#pragma warning(disable : 4127)
-#endif
 
 #include "libminiasync/vdm.h"
 #include "core/membuf.h"

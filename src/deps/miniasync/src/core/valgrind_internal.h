@@ -1,5 +1,5 @@
 /* SPDX-License-Identifier: BSD-3-Clause */
-/* Copyright 2015-2022, Intel Corporation */
+/* Copyright 2015-2023, Intel Corporation */
 
 /*
  * valgrind_internal.h -- internal definitions for valgrind macros
@@ -8,7 +8,7 @@
 #ifndef MINIASYNC_VALGRIND_INTERNAL_H
 #define MINIASYNC_VALGRIND_INTERNAL_H 1
 
-#if !defined(_WIN32) && !defined(__FreeBSD__) && !defined(__riscv)
+#if !defined(__FreeBSD__) && !defined(__riscv)
 #ifndef VALGRIND_ENABLED
 #define VALGRIND_ENABLED 1
 #endif

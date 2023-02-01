@@ -1,5 +1,5 @@
 /* SPDX-License-Identifier: BSD-3-Clause */
-/* Copyright 2017-2022, Intel Corporation */
+/* Copyright 2017-2023, Intel Corporation */
 
 /*
  * os.h -- os abstraction layer
@@ -17,22 +17,10 @@
 extern "C" {
 #endif
 
-#ifdef _WIN32
-#include "windows/include/unistd.h"
-#include "windows/include/platform.h"
-#else
 #include <unistd.h>
-#endif
 
-#ifndef _WIN32
 #define OS_DIR_SEPARATOR '/'
 #define OS_DIR_SEP_STR "/"
-#else
-#define OS_DIR_SEPARATOR '\\'
-#define OS_DIR_SEP_STR "\\"
-#endif
-
-#ifndef _WIN32
 
 /* madvise() */
 #ifdef __FreeBSD__
@@ -56,8 +44,6 @@ extern "C" {
 #define os_minor minor
 #endif
 
-#endif /* #ifndef _WIN32 */
-
 struct iovec;
 
 /* os_flock */
@@ -69,11 +55,7 @@ struct iovec;
 #define os_close close
 #define os_fclose fclose
 
-#ifndef _WIN32
 typedef off_t os_off_t;
-#else
-/* XXX: os_off_t defined in platform.h */
-#endif
 int os_open(const char *pathname, int flags, ...);
 int os_unlink(const char *pathname);
 FILE *os_fopen(const char *pathname, const char *mode);

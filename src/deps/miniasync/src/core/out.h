@@ -1,5 +1,5 @@
 /* SPDX-License-Identifier: BSD-3-Clause */
-/* Copyright 2014-2022, Intel Corporation */
+/* Copyright 2014-2023, Intel Corporation */
 
 /*
  * out.h -- definitions for "out" module
@@ -13,9 +13,6 @@
 #include <stdlib.h>
 
 #include "util.h"
-#ifdef _WIN32
-#include "platform.h"
-#endif
 
 #ifdef __cplusplus
 extern "C" {
@@ -206,20 +203,7 @@ extern "C" {
 	void out_set_vsnprintf_func(int (*vsnprintf_func)(char *str,
 		size_t size, const char *format, va_list ap));
 
-#ifdef _WIN32
-#ifndef PMDK_UTF8_API
-#define out_get_errormsg out_get_errormsgW
-#else
-#define out_get_errormsg out_get_errormsgU
-#endif
-#endif
-
-#ifndef _WIN32
 	const char *out_get_errormsg(void);
-#else
-	const char *out_get_errormsgU(void);
-	const wchar_t *out_get_errormsgW(void);
-#endif
 
 #ifdef __cplusplus
 }

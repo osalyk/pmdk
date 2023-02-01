@@ -1,6 +1,6 @@
 #
 # SPDX-License-Identifier: BSD-3-Clause
-# Copyright 2021-2022, Intel Corporation
+# Copyright 2021-2023, Intel Corporation
 #
 
 cmake_minimum_required(VERSION 3.3)
@@ -27,10 +27,6 @@ set(CMAKE_DISABLE_IN_SOURCE_BUILD ON)
 set(TEST_DIR ${CMAKE_CURRENT_BINARY_DIR}/test
 	CACHE STRING "working directory for tests")
 
-if(WIN32)
-	set(MINIASYNC_INCLUDE_DIR_WIN ${CMAKE_SOURCE_DIR}/src/windows/include/)
-endif()
-
 option(COVERAGE "run coverage test" OFF)
 option(DEVELOPER_MODE "enable developer checks" OFF)
 option(CHECK_CSTYLE "check code style of C sources" OFF)
@@ -51,9 +47,7 @@ include(GNUInstallDirs)
 include(${CMAKE_SOURCE_DIR}/cmake/functions.cmake)
 
 # look for pkg config (use it later for managing valgrind)
-if(NOT WIN32)
-	find_package(PkgConfig REQUIRED)
-endif()
+find_package(PkgConfig REQUIRED)
 
 if(NOT CMAKE_BUILD_TYPE)
 	set(CMAKE_BUILD_TYPE "Debug")
@@ -95,13 +89,6 @@ add_flag(-ggdb DEBUG)
 add_flag(-DDEBUG DEBUG)
 add_flag("-U_FORTIFY_SOURCE -D_FORTIFY_SOURCE=2" RELEASE)
 
-if(WIN32)
-# It looks like the issue is still unfixed:
-# https://developercommunity.visualstudio.com/t/several-warnings-in-windows-sdk-100177630-in-windo/435362
-	add_flag(-DWIN32_LEAN_AND_MEAN)
-	add_compile_options(/W3 /WX)
-endif()
-
 if(USE_ASAN)
 	add_sanitizer_flag(address)
 endif()
@@ -139,9 +126,7 @@ add_check_whitespace(utils-all
 		${CMAKE_CURRENT_SOURCE_DIR}/utils/md2man/*)
 
 # look for and enable valgrind
-if(NOT WIN32)
-	pkg_check_modules(VALGRIND valgrind)
-endif()
+pkg_check_modules(VALGRIND valgrind)
 
 configure_file(${CMAKE_SOURCE_DIR}/cmake/libminiasync.pc.in
 	${CMAKE_CURRENT_BINARY_DIR}/libminiasync.pc @ONLY)

@@ -1,5 +1,5 @@
 # SPDX-License-Identifier: BSD-3-Clause
-# Copyright 2021, Intel Corporation
+# Copyright 2021-2023, Intel Corporation
 
 cmake_minimum_required(VERSION 3.3)
 
@@ -7,9 +7,7 @@ set(DIR ${PARENT_DIR})
 set(TEST_DIR ${CMAKE_CURRENT_BINARY_DIR}/)
 set(EXAMPLES_DIR ${CMAKE_CURRENT_SOURCE_DIR}/../examples)
 
-if(NOT WIN32)
-	set(BUILD "")
-endif()
+set(BUILD "")
 
 function(setup)
 	execute_process(COMMAND ${CMAKE_COMMAND} -E remove_directory ${DIR})

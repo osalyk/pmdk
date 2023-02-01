@@ -1,10 +1,7 @@
 // SPDX-License-Identifier: BSD-3-Clause
-/* Copyright 2022, Intel Corporation */
+/* Copyright 2022-2023, Intel Corporation */
 
 /* disable conditional expression is const warning */
-#ifdef _WIN32
-#pragma warning(disable : 4127)
-#endif
 
 #include <stdlib.h>
 #include <string.h>

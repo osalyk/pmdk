@@ -1,5 +1,5 @@
 # SPDX-License-Identifier: BSD-3-Clause
-# Copyright 2021-2022, Intel Corporation
+# Copyright 2021-2023, Intel Corporation
 
 set(GLOBAL_TEST_ARGS -DPARENT_DIR=${TEST_DIR})
 
@@ -22,13 +22,6 @@ function(add_link_executable name sources libs)
 
 	target_include_directories(${name}
 		PRIVATE ${CORE_SOURCE_DIR})
-
-if(WIN32)
-	target_include_directories(${name}
-		PRIVATE ${MINIASYNC_INCLUDE_DIR_WIN}/sys)
-	target_include_directories(${name}
-		PRIVATE ${MINIASYNC_INCLUDE_DIR_WIN})
-endif()
 
 	target_link_libraries(${name} PRIVATE ${libs})
 endfunction()

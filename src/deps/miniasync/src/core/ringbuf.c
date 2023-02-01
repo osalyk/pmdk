@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: BSD-3-Clause
-/* Copyright 2017-2022, Intel Corporation */
+/* Copyright 2017-2023, Intel Corporation */
 
 /*
  * ringbuf.c -- implementation of a simple multi-producer/multi-consumer (MPMC)
@@ -8,10 +8,6 @@
  */
 
 /* disable conditional expression is const warning */
-#ifdef _WIN32
-#pragma warning(disable : 4127)
-#endif
-
 #include "core/valgrind_internal.h"
 
 #include "ringbuf.h"
@@ -20,10 +16,6 @@
 #include "os.h"
 #include "os_thread.h"
 #include "sys_util.h"
-
-#ifdef _WIN32
-#define __sync_synchronize() MemoryBarrier()
-#endif
 
 #if 1
 /*

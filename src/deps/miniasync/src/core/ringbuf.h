@@ -1,5 +1,5 @@
 /* SPDX-License-Identifier: BSD-3-Clause */
-/* Copyright 2017-2022, Intel Corporation */
+/* Copyright 2017-2023, Intel Corporation */
 
 /*
  * ringbuf.h -- internal definitions for mpmc ring buffer
@@ -11,11 +11,7 @@
 #include "stddef.h"
 #include "stdint.h"
 
-#ifdef _WIN32
-#include "windows/include/unistd.h"
-#else
 #include "unistd.h"
-#endif
 
 struct ringbuf;
 

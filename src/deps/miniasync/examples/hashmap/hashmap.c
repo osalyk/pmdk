@@ -14,7 +14,6 @@
 #define fetch_and_add __sync_fetch_and_add
 #define fetch_and_sub __sync_fetch_and_sub
 #else
-#include <windows.h>
 #include <BaseTsd.h>
 typedef SSIZE_T ssize_t;
 
