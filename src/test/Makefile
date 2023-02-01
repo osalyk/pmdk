@@ -129,7 +129,6 @@ OTHER_TESTS = \
 	compat_incompat_features\
 	ctl_prefault\
 	ctl_cow\
-	getopt\
 	magic\
 	mmap\
 	mmap_fixed\
