@@ -19,6 +19,7 @@
       <IntrinsicFunctions>true</IntrinsicFunctions>
       <ExceptionHandling>false</ExceptionHandling>
       <FavorSizeOrSpeed>Neither</FavorSizeOrSpeed>
+      <SDLCheck>false</SDLCheck>
     </ClCompile>
     <Link>
       <TreatLinkerWarningAsErrors>true</TreatLinkerWarningAsErrors>
