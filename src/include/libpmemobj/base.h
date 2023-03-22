@@ -146,6 +146,9 @@ pmemobj_direct_inline(PMEMoid oid)
  */
 #if defined(_WIN32) || defined(_PMEMOBJ_INTRNL) ||\
 	defined(PMEMOBJ_DIRECT_NON_INLINE)
+#ifdef _WIN32
+WIN_DEPR_ATTR
+#endif
 void *pmemobj_direct(PMEMoid oid);
 #else
 #define pmemobj_direct pmemobj_direct_inline
