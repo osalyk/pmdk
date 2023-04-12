@@ -44,6 +44,7 @@ OBJ_TESTS = \
 	\
 	obj_action\
 	obj_alloc\
+	obj_alloc_mt\
 	obj_badblock\
 	obj_bucket\
 	obj_check\
