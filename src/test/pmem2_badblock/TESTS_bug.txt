@@ -8,7 +8,6 @@ import testframework as t
 from testframework import granularity as g
 import re
 
-
 @t.linux_only
 @t.require_admin
 @g.require_granularity(g.CACHELINE)
@@ -25,6 +24,7 @@ class PMEM2_BADBLOCK_COUNT(t.Test):
             ctx.env['UNITTEST_LOG_LEVEL'] = '2'
 
         bbTool = ctx.badblock
+	# XXX - https://github.com/pmem/pmdk/issues/5606
         bbTool.clear_all(filepath)
         bbTool.inject(filepath, 0)
 
@@ -50,7 +50,6 @@ class PMEM2_BADBLOCK_COUNT(t.Test):
         # restore previous log level
         ctx.env['UNITTEST_LOG_LEVEL'] = old_log_level
 
-
 @t.linux_only
 @t.require_admin
 @g.require_granularity(g.CACHELINE)
@@ -68,7 +67,6 @@ class PMEM2_BADBLOCK(t.Test):
 
         bbTool.clear_all(filepath)
 
-
 class TEST0(PMEM2_BADBLOCK_COUNT):
     """
     compares the number of bad blocks returned by pmem2 and ndctl on fsdax
@@ -78,7 +76,6 @@ class TEST0(PMEM2_BADBLOCK_COUNT):
     def run(self, ctx):
         filepath = ctx.create_holey_file(4 * t.KiB, 'testfile')
         self.run_test(ctx, filepath)
-
 
 @t.require_devdax(t.DevDax('devdax1'))
 class TEST1(PMEM2_BADBLOCK_COUNT):
@@ -91,7 +88,6 @@ class TEST1(PMEM2_BADBLOCK_COUNT):
         ddpath = ctx.devdaxes.devdax1.path
         self.run_test(ctx, ddpath)
 
-
 class TEST2(PMEM2_BADBLOCK):
     """test mcsafe read operation with encountered badblock"""
     test_case = "test_pmem2_src_mcsafe_badblock_read"
@@ -99,7 +95,6 @@ class TEST2(PMEM2_BADBLOCK):
     def run(self, ctx):
         filepath = ctx.create_holey_file(4 * t.KiB, 'testfile')
         self.run_test(ctx, filepath)
-
 
 class TEST3(PMEM2_BADBLOCK):
     """test mcsafe write operation with encountered badblock"""
@@ -109,7 +104,6 @@ class TEST3(PMEM2_BADBLOCK):
         filepath = ctx.create_holey_file(4 * t.KiB, 'testfile')
         self.run_test(ctx, filepath)
 
-
 @t.require_devdax(t.DevDax('devdax1'))
 class TEST4(PMEM2_BADBLOCK):
     """test mcsafe read operation with encountered badblock on devdax"""
@@ -118,7 +112,6 @@ class TEST4(PMEM2_BADBLOCK):
     def run(self, ctx):
         ddpath = ctx.devdaxes.devdax1.path
         self.run_test(ctx, ddpath)
-
 
 @t.require_devdax(t.DevDax('devdax1'))
 class TEST5(PMEM2_BADBLOCK):
