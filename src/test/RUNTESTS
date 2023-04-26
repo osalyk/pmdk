@@ -57,27 +57,6 @@ EOF
 	exit 1
 }
 
-function fatal() {
-	echo "$*" >&2
-	exit 1
-}
-
-#
-# check_dax -- check first device dax
-#
-function check_dax() {
-	out=$(../tools/pmemdetect/pmemdetect.static-nondebug -d $1 2>&1)
-	ret=$?
-	if [ "$ret" == "0" ]; then
-		:
-	elif [ "$ret" == "1" ]; then
-		msg "$prefix $out"
-		exit 0
-	else
-		fatal "$UNITTEST_NAME: pmemdetect: $out"
-	fi
-}
-
 #
 # runtest_local -- run test using provided parameters
 #
@@ -346,10 +325,6 @@ runtest() {
 				# if KEEP_GOING=y and test fail
 				if [ "$keep_going_skip" == "n" ]; then
 					runtest_local
-				fi
-
-				if [ "$2" != "" ]; then
-					check_dax $2
 				fi
 			done
 		done
@@ -685,7 +660,7 @@ if [ "$1" ]; then
 	for test in $*
 	do
 		[ -d "$test" ] || echo "RUNTESTS: Test does not exist: $test"
-		[ -f "$test/TEST0" ] && runtest $test $DEVICE_DAX_PATH
+		[ -f "$test/TEST0" ] && runtest $test
 	done
 else
 	# no arguments means run them all
@@ -696,7 +671,7 @@ else
 			echo "RUNTESTS: Skipping: $testdir"
 			continue
 		fi
-		runtest $testdir $DEVICE_DAX_PATH
+		runtest $testdir
 	done
 fi
 
