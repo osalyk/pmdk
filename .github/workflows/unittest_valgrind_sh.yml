@@ -14,7 +14,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        os: [[self-hosted, Rocky8]]
+        os: [[self-hosted, Rocky8],[self-hosted, Rocky8]]
         config: ['RUNTESTS -m force-enable',
                  'RUNTESTS -p force-enable',
                  'RUNTESTS -d force-enable',

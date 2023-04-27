@@ -10,7 +10,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        os: [[self-hosted, Rocky8]]
+        os: [[self-hosted, Rocky8],[self-hosted, Rocky9]]
     env:
       WORKDIR: utils/gha-runners
 
