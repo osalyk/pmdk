@@ -91,9 +91,14 @@ class NdctlBB(tools.Ndctl, BBTool):
                 raise futils.Fail('unable to translate bad blocks')
             block = int(proc.stdout.strip())
 
-        futils.run_command("sudo ndctl inject-error --block={} --count={} {}"
-                           .format(block, count, namespace),
-                           "injecting bad block failed")
+        # XXX - Injection of bad block op is unsupported on some platforms
+        # https://github.com/pmem/pmdk/issues/5636
+        try:
+            futils.run_command(
+                "sudo ndctl inject-error --block={} --count={} {}"
+                .format(block, count, namespace)).strip().decode('UTF8')
+        except futils.Fail:
+            futils.skip("injection bad block operations is unsupported")
 
     def get_bad_blocks_count(self, file):
         device = self._get_path_device(file)
