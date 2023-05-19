@@ -13,6 +13,9 @@ require_fs_type any
 require_test_type medium
 configure_valgrind drd force-disable
 configure_valgrind helgrind force-disable
+# XXX disable the test for `pmemcheck'
+# until https://github.com/pmem/pmdk/issues/5642 is fixed.
+configure_valgrind pmemcheck force-disable
 setup
 
 PMEM_IS_PMEM_FORCE=1 expect_normal_exit\
