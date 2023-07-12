@@ -3,9 +3,11 @@ name: Scans
 
 on:
   workflow_dispatch:
-  schedule:
-    # run this job at 00:00 UTC every day
-    - cron:  '0 0 * * *'
+  pull_request:
+
+env:
+  COVERITY_SCAN_NOTIFICATION_EMAIL:  ${{ secrets.COVERITY_SCAN_NOTIFICATION_EMAIL }}
+  COVERITY_SCAN_TOKEN:               ${{ secrets.COVERITY_SCAN_TOKEN }}
 
 jobs:
   call-bandit:
