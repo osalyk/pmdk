@@ -16,8 +16,10 @@ jobs:
       matrix:
         os: [[self-hosted, rhel],[self-hosted, opensuse]]
         build: ['debug', 'nondebug', 'static_debug', 'static_nondebug']
+        fault_injection: ['1', '0']
     env:
       WORKDIR: utils/gha-runners
+      FAULT_INJECTION: ${{ matrix.fault_injection }}
 
     steps:
       - name: Clone the git repo
