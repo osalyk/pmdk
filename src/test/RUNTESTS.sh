@@ -5,7 +5,7 @@
 #
 # RUNTESTS.sh -- setup the environment and run each test
 #
-
+set +x
 #
 # usage -- print usage message and exit
 #
@@ -97,6 +97,7 @@ runtest_local() {
 	[ $retval != 0 ] && {
 		[ -t 2 ] && command -v tput >/dev/null && errmsg="$(tput setaf 1)$errmsg$(tput sgr0)"
 		echo "RUNTESTS.sh: stopping: $RUNTEST_DIR/$RUNTEST_SCRIPT $errmsg, $RUNTEST_PARAMS" >&2
+		echo "bla-----------------$keep_going"
 		if [ "$keep_going" == "y" ]; then
 			keep_going_exit_code=1
 			keep_going_skip=y
@@ -111,10 +112,12 @@ runtest_local() {
 				fi
 			fi
 		else
+			echo "---------exit1-------------------"
 			exit 1
 		fi
 	}
 	rm -f $TEMP_LOC
+	echo "---------czy moze tu-------------------"
 
 	[ "$verbose_old" != "-1" ] && verbose=$verbose_old
 
@@ -386,6 +389,7 @@ verbose_tests=
 [ -n "$TEST_FS" ] && fstype=$TEST_FS
 [ -n "$TEST_TIMEOUT" ] && runtest_timeout=$TEST_TIMEOUT
 [ -n "$KEEP_GOING" ] && keep_going=$KEEP_GOING
+echo "-----------------$keep_going-----------------------"
 [ -n "$VERBOSE_TESTS" ] && verbose_tests="$VERBOSE_TESTS"
 
 PMEMDETECT="tools/pmemdetect/pmemdetect.static_nondebug"
@@ -619,28 +623,6 @@ done
 
 [ -z "$buildtype" ] && buildtype=$def_buildtype
 [[ $buildtype =~ .*all.* ]] && buildtype=all
-
-# parse MAKEFLAGS variable
-[ -n "$MAKEFLAGS" ] && {
-	# extract flags from variable
-	FLAGS=
-	for flag in $MAKEFLAGS; do
-		[ "$flag" == "--" ] && break
-		FLAGS+="$flag"
-	done
-
-	[ -n "$FLAGS" ] && {
-		# apply supported flags
-		for i in $(seq ${#FLAGS}); do
-			case "${FLAGS:i-1:1}"
-			in
-			k)
-				keep_going=y
-				;;
-			esac
-		done
-	}
-}
 
 [ "$verbose" ] && {
 	echo -n Options:
