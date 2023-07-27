@@ -46,7 +46,7 @@ function ynToTrueFalse() {
 }
 
 # static values for both Bash and Python
-KEEP_GOING=y
+KEEP_GOING=n
 keep_going=$(ynToTrueFalse $KEEP_GOING)
 TEST_TYPE=check
 TEST_BUILD="debug nondebug"
