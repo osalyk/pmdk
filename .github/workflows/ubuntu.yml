@@ -42,3 +42,7 @@ jobs:
         env:
           TEST_BUILD: ${{ matrix.TEST_BUILD }}
         run: cd $WORKDIR && ./build-CI.sh
+
+      - name: Clean workspace
+        run: |
+          rm -rf "${GITHUB_WORKSPACE:?}/*"
