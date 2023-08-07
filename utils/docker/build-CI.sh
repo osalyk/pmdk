@@ -64,7 +64,7 @@ SCRIPTSDIR=$WORKDIR/utils/docker
 #   By default --tmpfs add nosuid,nodev,noexec to the mount flags, we don't
 #   want that and just to make sure we add the usually default rw,relatime just
 #   in case docker change the defaults.
-docker run --rm --name=$containerName -i \
+docker run --rm --name=$containerName -i -t \
 	--cap-add=SYS_PTRACE --security-opt seccomp=unconfined \
 	$DNS_SETTING \
 	--env http_proxy=$http_proxy \
