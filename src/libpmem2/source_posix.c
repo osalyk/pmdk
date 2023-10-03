@@ -19,6 +19,7 @@ int
 pmem2_source_from_fd(struct pmem2_source **src, int fd)
 {
 	PMEM2_ERR_CLR();
+	LOG(15, "fd: %d", fd);
 
 	*src = NULL;
 
