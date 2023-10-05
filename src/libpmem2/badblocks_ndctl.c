@@ -29,6 +29,8 @@
 #include "set_badblocks.h"
 #include "extent.h"
 
+// Set USE_NDCTL environment variable to '1' to use functions with ndctl
+#define USE_NDCTL_VAR "USE_NDCTL"
 typedef int pmem2_badblock_next_type(
 		struct pmem2_badblock_context *bbctx,
 		struct pmem2_badblock *bb);
@@ -250,111 +252,116 @@ int
 pmem2_badblock_context_new(struct pmem2_badblock_context **bbctx,
 	const struct pmem2_source *src)
 {
-	LOG(3, "src %p bbctx %p", src, bbctx);
-	PMEM2_ERR_CLR();
+	char *env_config = os_getenv(USE_NDCTL_VAR);
+	if (env_config != NULL && env_config[0] == '1') {
+		LOG(3, "src %p bbctx %p", src, bbctx);
+		PMEM2_ERR_CLR();
 
-	ASSERTne(bbctx, NULL);
+		ASSERTne(bbctx, NULL);
 
-	if (src->type == PMEM2_SOURCE_ANON) {
-		ERR("Anonymous source does not support bad blocks");
+		if (src->type == PMEM2_SOURCE_ANON) {
+			ERR("Anonymous source does not support bad blocks");
+			return PMEM2_E_NOSUPP;
+		}
+
+		ASSERTeq(src->type, PMEM2_SOURCE_FD);
+
+		struct ndctl_ctx *ctx;
+		struct ndctl_region *region;
+		struct ndctl_namespace *ndns;
+		struct pmem2_badblock_context *tbbctx = NULL;
+		enum pmem2_file_type pmem2_type;
+		int ret = PMEM2_E_UNKNOWN;
+		*bbctx = NULL;
+
+		LOG(3, "ndctl_new()");
+		errno = ndctl_new(&ctx) * (-1);
+		if (errno) {
+			ERR("!ndctl_new");
+			return PMEM2_E_ERRNO;
+		}
+
+		pmem2_type = src->value.ftype;
+
+		ret = pmem2_region_namespace(ctx, src, &region, &ndns);
+		if (ret) {
+			LOG(1, "getting region and namespace failed");
+			goto exit_ndctl_unref;
+		}
+
+		tbbctx = pmem2_zalloc(sizeof(struct pmem2_badblock_context), &ret);
+		if (ret)
+			goto exit_ndctl_unref;
+
+		tbbctx->fd = src->value.fd;
+		tbbctx->file_type = pmem2_type;
+		tbbctx->ctx = ctx;
+
+		if (region == NULL || ndns == NULL) {
+			/* did not found any matching device */
+			*bbctx = tbbctx;
+			return 0;
+		}
+
+		if (ndctl_namespace_get_mode(ndns) == NDCTL_NS_MODE_FSDAX) {
+			tbbctx->ndns = ndns;
+			tbbctx->pmem2_badblock_next_func =
+				pmem2_badblock_next_namespace;
+			tbbctx->pmem2_badblock_get_next_func =
+				pmem2_namespace_get_first_badblock;
+		} else {
+			unsigned long long ns_beg, ns_size, ns_end;
+			ret = badblocks_get_namespace_bounds(
+					region, ndns,
+					&ns_beg, &ns_size);
+			if (ret) {
+				LOG(1, "cannot read namespace's bounds");
+				goto error_free_all;
+			}
+
+			ns_end = ns_beg + ns_size - 1;
+
+			LOG(10,
+				"namespace: begin %llu, end %llu size %llu (in 512B sectors)",
+				B2SEC(ns_beg), B2SEC(ns_end + 1) - 1, B2SEC(ns_size));
+
+			tbbctx->rgn.bus = ndctl_region_get_bus(region);
+			tbbctx->rgn.region = region;
+			tbbctx->rgn.ns_beg = ns_beg;
+			tbbctx->rgn.ns_end = ns_end;
+			tbbctx->rgn.ns_res = ns_beg + ndctl_region_get_resource(region);
+			tbbctx->pmem2_badblock_next_func =
+				pmem2_badblock_next_region;
+			tbbctx->pmem2_badblock_get_next_func =
+				pmem2_region_get_first_badblock;
+		}
+
+		if (pmem2_type == PMEM2_FTYPE_REG) {
+			/* only regular files have extents */
+			ret = pmem2_extents_create_get(src->value.fd, &tbbctx->exts);
+			if (ret) {
+				LOG(1, "getting extents of fd %i failed",
+					src->value.fd);
+				goto error_free_all;
+			}
+		}
+
+		/* set the context */
+		*bbctx = tbbctx;
+
+		return 0;
+
+	error_free_all:
+		pmem2_extents_destroy(&tbbctx->exts);
+		Free(tbbctx);
+
+	exit_ndctl_unref:
+		ndctl_unref(ctx);
+
+		return ret;
+	} else {
 		return PMEM2_E_NOSUPP;
 	}
-
-	ASSERTeq(src->type, PMEM2_SOURCE_FD);
-
-	struct ndctl_ctx *ctx;
-	struct ndctl_region *region;
-	struct ndctl_namespace *ndns;
-	struct pmem2_badblock_context *tbbctx = NULL;
-	enum pmem2_file_type pmem2_type;
-	int ret = PMEM2_E_UNKNOWN;
-	*bbctx = NULL;
-
-	LOG(3, "ndctl_new()");
-	errno = ndctl_new(&ctx) * (-1);
-	if (errno) {
-		ERR("!ndctl_new");
-		return PMEM2_E_ERRNO;
-	}
-
-	pmem2_type = src->value.ftype;
-
-	ret = pmem2_region_namespace(ctx, src, &region, &ndns);
-	if (ret) {
-		LOG(1, "getting region and namespace failed");
-		goto exit_ndctl_unref;
-	}
-
-	tbbctx = pmem2_zalloc(sizeof(struct pmem2_badblock_context), &ret);
-	if (ret)
-		goto exit_ndctl_unref;
-
-	tbbctx->fd = src->value.fd;
-	tbbctx->file_type = pmem2_type;
-	tbbctx->ctx = ctx;
-
-	if (region == NULL || ndns == NULL) {
-		/* did not found any matching device */
-		*bbctx = tbbctx;
-		return 0;
-	}
-
-	if (ndctl_namespace_get_mode(ndns) == NDCTL_NS_MODE_FSDAX) {
-		tbbctx->ndns = ndns;
-		tbbctx->pmem2_badblock_next_func =
-			pmem2_badblock_next_namespace;
-		tbbctx->pmem2_badblock_get_next_func =
-			pmem2_namespace_get_first_badblock;
-	} else {
-		unsigned long long ns_beg, ns_size, ns_end;
-		ret = badblocks_get_namespace_bounds(
-				region, ndns,
-				&ns_beg, &ns_size);
-		if (ret) {
-			LOG(1, "cannot read namespace's bounds");
-			goto error_free_all;
-		}
-
-		ns_end = ns_beg + ns_size - 1;
-
-		LOG(10,
-			"namespace: begin %llu, end %llu size %llu (in 512B sectors)",
-			B2SEC(ns_beg), B2SEC(ns_end + 1) - 1, B2SEC(ns_size));
-
-		tbbctx->rgn.bus = ndctl_region_get_bus(region);
-		tbbctx->rgn.region = region;
-		tbbctx->rgn.ns_beg = ns_beg;
-		tbbctx->rgn.ns_end = ns_end;
-		tbbctx->rgn.ns_res = ns_beg + ndctl_region_get_resource(region);
-		tbbctx->pmem2_badblock_next_func =
-			pmem2_badblock_next_region;
-		tbbctx->pmem2_badblock_get_next_func =
-			pmem2_region_get_first_badblock;
-	}
-
-	if (pmem2_type == PMEM2_FTYPE_REG) {
-		/* only regular files have extents */
-		ret = pmem2_extents_create_get(src->value.fd, &tbbctx->exts);
-		if (ret) {
-			LOG(1, "getting extents of fd %i failed",
-				src->value.fd);
-			goto error_free_all;
-		}
-	}
-
-	/* set the context */
-	*bbctx = tbbctx;
-
-	return 0;
-
-error_free_all:
-	pmem2_extents_destroy(&tbbctx->exts);
-	Free(tbbctx);
-
-exit_ndctl_unref:
-	ndctl_unref(ctx);
-
-	return ret;
 }
 
 /*
@@ -363,21 +370,25 @@ exit_ndctl_unref:
 void
 pmem2_badblock_context_delete(struct pmem2_badblock_context **bbctx)
 {
-	LOG(3, "bbctx %p", bbctx);
-	PMEM2_ERR_CLR();
+	char *env_config = os_getenv(USE_NDCTL_VAR);
+	if (env_config != NULL && env_config[0] == '1') {
+		LOG(3, "bbctx %p", bbctx);
+		PMEM2_ERR_CLR();
 
-	ASSERTne(bbctx, NULL);
+		ASSERTne(bbctx, NULL);
 
-	if (*bbctx == NULL)
-		return;
+		if (*bbctx == NULL)
+			return;
 
-	struct pmem2_badblock_context *tbbctx = *bbctx;
+		struct pmem2_badblock_context *tbbctx = *bbctx;
 
-	pmem2_extents_destroy(&tbbctx->exts);
-	ndctl_unref(tbbctx->ctx);
-	Free(tbbctx);
+		pmem2_extents_destroy(&tbbctx->exts);
+		ndctl_unref(tbbctx->ctx);
+		Free(tbbctx);
 
-	*bbctx = NULL;
+		*bbctx = NULL;
+	} else {
+	}
 }
 
 /*
@@ -531,143 +542,148 @@ int
 pmem2_badblock_next(struct pmem2_badblock_context *bbctx,
 			struct pmem2_badblock *bb)
 {
-	LOG(3, "bbctx %p bb %p", bbctx, bb);
-	PMEM2_ERR_CLR();
+	char *env_config = os_getenv(USE_NDCTL_VAR);
+	if (env_config != NULL && env_config[0] == '1') {
+		LOG(3, "bbctx %p bb %p", bbctx, bb);
+		PMEM2_ERR_CLR();
 
-	ASSERTne(bbctx, NULL);
-	ASSERTne(bb, NULL);
+		ASSERTne(bbctx, NULL);
+		ASSERTne(bb, NULL);
 
-	struct pmem2_badblock bbn;
-	unsigned long long bb_beg;
-	unsigned long long bb_end;
-	unsigned long long bb_len;
-	unsigned long long bb_off;
-	unsigned long long ext_beg = 0; /* placate compiler warnings */
-	unsigned long long ext_end = -1ULL;
-	unsigned e;
-	int ret;
+		struct pmem2_badblock bbn;
+		unsigned long long bb_beg;
+		unsigned long long bb_end;
+		unsigned long long bb_len;
+		unsigned long long bb_off;
+		unsigned long long ext_beg = 0; /* placate compiler warnings */
+		unsigned long long ext_end = -1ULL;
+		unsigned e;
+		int ret;
 
-	if (bbctx->rgn.region == NULL && bbctx->ndns == NULL) {
-		ERR("Cannot find any matching device, no bad blocks found");
-		return PMEM2_E_NO_BAD_BLOCK_FOUND;
-	}
+		if (bbctx->rgn.region == NULL && bbctx->ndns == NULL) {
+			ERR("Cannot find any matching device, no bad blocks found");
+			return PMEM2_E_NO_BAD_BLOCK_FOUND;
+		}
 
-	struct extents *exts = bbctx->exts;
+		struct extents *exts = bbctx->exts;
 
-	/* DAX devices have no extents */
-	if (!exts) {
-		ret = bbctx->pmem2_badblock_next_func(bbctx, &bbn);
-		*bb = bbn;
-		return ret;
-	}
-
-	/*
-	 * There is at least one extent.
-	 * Loop until:
-	 * 1) a bad block overlaps with an extent or
-	 * 2) there are no more bad blocks.
-	 */
-	int bb_overlaps_with_extent = 0;
-	do {
-		if (bbctx->last_bb.length) {
-			/*
-			 * We have saved the last bad block to check it
-			 * with the next extent saved
-			 * in bbctx->first_extent.
-			 */
-			ASSERTne(bbctx->first_extent, 0);
-			bbn = bbctx->last_bb;
-			bbctx->last_bb.offset = 0;
-			bbctx->last_bb.length = 0;
-		} else {
-			ASSERTeq(bbctx->first_extent, 0);
-			/* look for the next bad block */
+		/* DAX devices have no extents */
+		if (!exts) {
 			ret = bbctx->pmem2_badblock_next_func(bbctx, &bbn);
-			if (ret)
-				return ret;
+			*bb = bbn;
+			return ret;
 		}
 
-		bb_beg = bbn.offset;
-		bb_end = bb_beg + bbn.length - 1;
-
-		for (e = bbctx->first_extent;
-				e < exts->extents_count;
-				e++) {
-
-			ext_beg = exts->extents[e].offset_physical;
-			ext_end = ext_beg + exts->extents[e].length - 1;
-
-			/* check if the bad block overlaps with the extent */
-			if (bb_beg <= ext_end && ext_beg <= bb_end) {
-				/* bad block overlaps with the extent */
-				bb_overlaps_with_extent = 1;
-
-				if (bb_end > ext_end &&
-				    e + 1 < exts->extents_count) {
-					/*
-					 * The bad block is longer than
-					 * the extent and there are
-					 * more extents.
-					 * Save the current bad block
-					 * to check it with the next extent.
-					 */
-					bbctx->first_extent = e + 1;
-					bbctx->last_bb = bbn;
-				} else {
-					/*
-					 * All extents were checked
-					 * with the current bad block.
-					 */
-					bbctx->first_extent = 0;
-					bbctx->last_bb.length = 0;
-					bbctx->last_bb.offset = 0;
-				}
-				break;
+		/*
+		* There is at least one extent.
+		* Loop until:
+		* 1) a bad block overlaps with an extent or
+		* 2) there are no more bad blocks.
+		*/
+		int bb_overlaps_with_extent = 0;
+		do {
+			if (bbctx->last_bb.length) {
+				/*
+				* We have saved the last bad block to check it
+				* with the next extent saved
+				* in bbctx->first_extent.
+				*/
+				ASSERTne(bbctx->first_extent, 0);
+				bbn = bbctx->last_bb;
+				bbctx->last_bb.offset = 0;
+				bbctx->last_bb.length = 0;
+			} else {
+				ASSERTeq(bbctx->first_extent, 0);
+				/* look for the next bad block */
+				ret = bbctx->pmem2_badblock_next_func(bbctx, &bbn);
+				if (ret)
+					return ret;
 			}
+
+			bb_beg = bbn.offset;
+			bb_end = bb_beg + bbn.length - 1;
+
+			for (e = bbctx->first_extent;
+					e < exts->extents_count;
+					e++) {
+
+				ext_beg = exts->extents[e].offset_physical;
+				ext_end = ext_beg + exts->extents[e].length - 1;
+
+				/* check if the bad block overlaps with the extent */
+				if (bb_beg <= ext_end && ext_beg <= bb_end) {
+					/* bad block overlaps with the extent */
+					bb_overlaps_with_extent = 1;
+
+					if (bb_end > ext_end &&
+					e + 1 < exts->extents_count) {
+						/*
+						* The bad block is longer than
+						* the extent and there are
+						* more extents.
+						* Save the current bad block
+						* to check it with the next extent.
+						*/
+						bbctx->first_extent = e + 1;
+						bbctx->last_bb = bbn;
+					} else {
+						/*
+						* All extents were checked
+						* with the current bad block.
+						*/
+						bbctx->first_extent = 0;
+						bbctx->last_bb.length = 0;
+						bbctx->last_bb.offset = 0;
+					}
+					break;
+				}
+			}
+
+			/* check all extents with the next bad block */
+			if (bb_overlaps_with_extent == 0) {
+				bbctx->first_extent = 0;
+				bbctx->last_bb.length = 0;
+				bbctx->last_bb.offset = 0;
+			}
+
+		} while (bb_overlaps_with_extent == 0);
+
+		/* bad block overlaps with an extent */
+
+		bb_beg = (bb_beg > ext_beg) ? bb_beg : ext_beg;
+		bb_end = (bb_end < ext_end) ? bb_end : ext_end;
+		bb_len = bb_end - bb_beg + 1;
+		bb_off = bb_beg + exts->extents[e].offset_logical
+				- exts->extents[e].offset_physical;
+
+		LOG(10, "bad block found: physical offset: %llu, length: %llu",
+			bb_beg, bb_len);
+
+		/* make sure the offset is block-aligned */
+		unsigned long long not_block_aligned = bb_off & (exts->blksize - 1);
+		if (not_block_aligned) {
+			bb_off -= not_block_aligned;
+			bb_len += not_block_aligned;
 		}
 
-		/* check all extents with the next bad block */
-		if (bb_overlaps_with_extent == 0) {
-			bbctx->first_extent = 0;
-			bbctx->last_bb.length = 0;
-			bbctx->last_bb.offset = 0;
-		}
+		/* make sure the length is block-aligned */
+		bb_len = ALIGN_UP(bb_len, exts->blksize);
 
-	} while (bb_overlaps_with_extent == 0);
+		LOG(4, "bad block found: logical offset: %llu, length: %llu",
+			bb_off, bb_len);
 
-	/* bad block overlaps with an extent */
+		/*
+		* Return the bad block with offset and length
+		* expressed in bytes and offset relative
+		* to the beginning of the file.
+		*/
+		bb->offset = bb_off;
+		bb->length = bb_len;
 
-	bb_beg = (bb_beg > ext_beg) ? bb_beg : ext_beg;
-	bb_end = (bb_end < ext_end) ? bb_end : ext_end;
-	bb_len = bb_end - bb_beg + 1;
-	bb_off = bb_beg + exts->extents[e].offset_logical
-			- exts->extents[e].offset_physical;
-
-	LOG(10, "bad block found: physical offset: %llu, length: %llu",
-		bb_beg, bb_len);
-
-	/* make sure the offset is block-aligned */
-	unsigned long long not_block_aligned = bb_off & (exts->blksize - 1);
-	if (not_block_aligned) {
-		bb_off -= not_block_aligned;
-		bb_len += not_block_aligned;
+		return 0;
+	} else {
+		return PMEM2_E_NOSUPP;
 	}
-
-	/* make sure the length is block-aligned */
-	bb_len = ALIGN_UP(bb_len, exts->blksize);
-
-	LOG(4, "bad block found: logical offset: %llu, length: %llu",
-		bb_off, bb_len);
-
-	/*
-	 * Return the bad block with offset and length
-	 * expressed in bytes and offset relative
-	 * to the beginning of the file.
-	 */
-	bb->offset = bb_off;
-	bb->length = bb_len;
-
-	return 0;
 }
 
 /*
@@ -757,16 +773,21 @@ int
 pmem2_badblock_clear(struct pmem2_badblock_context *bbctx,
 			const struct pmem2_badblock *bb)
 {
-	LOG(3, "bbctx %p badblock %p", bbctx, bb);
-	PMEM2_ERR_CLR();
+	char *env_config = os_getenv(USE_NDCTL_VAR);
+	if (env_config != NULL && env_config[0] == '1') {
+		LOG(3, "bbctx %p badblock %p", bbctx, bb);
+		PMEM2_ERR_CLR();
 
-	ASSERTne(bbctx, NULL);
-	ASSERTne(bb, NULL);
+		ASSERTne(bbctx, NULL);
+		ASSERTne(bb, NULL);
 
-	if (bbctx->file_type == PMEM2_FTYPE_DEVDAX)
-		return pmem2_badblock_clear_devdax(bbctx, bb);
+		if (bbctx->file_type == PMEM2_FTYPE_DEVDAX)
+			return pmem2_badblock_clear_devdax(bbctx, bb);
 
-	ASSERTeq(bbctx->file_type, PMEM2_FTYPE_REG);
+		ASSERTeq(bbctx->file_type, PMEM2_FTYPE_REG);
 
-	return pmem2_badblock_clear_fsdax(bbctx->fd, bb);
+		return pmem2_badblock_clear_fsdax(bbctx->fd, bb);
+	} else {
+		return PMEM2_E_NOSUPP;
+	}
 }
