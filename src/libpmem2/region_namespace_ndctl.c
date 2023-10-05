@@ -17,6 +17,9 @@
 #include "region_namespace.h"
 #include "out.h"
 
+// Set USE_NDCTL environment variable to '1' to use functions with ndctl
+#define USE_NDCTL_VAR "USE_NDCTL"
+
 /*
  * ndctl_match_devdax -- (internal) returns 0 if the devdax matches
  *                       with the given file, 1 if it doesn't match,
@@ -226,33 +229,42 @@ pmem2_region_namespace(struct ndctl_ctx *ctx,
 int
 pmem2_get_region_id(const struct pmem2_source *src, unsigned *region_id)
 {
-	LOG(3, "src %p region_id %p", src, region_id);
+	char *env_config = os_getenv(USE_NDCTL_VAR);
+	if (env_config != NULL && env_config[0] == '1') {
+		LOG(3, "src %p region_id %p", src, region_id);
 
-	struct ndctl_region *region;
-	struct ndctl_namespace *ndns;
-	struct ndctl_ctx *ctx;
+		struct ndctl_region *region;
+		struct ndctl_namespace *ndns;
+		struct ndctl_ctx *ctx;
 
-	errno = ndctl_new(&ctx) * (-1);
-	if (errno) {
-		ERR("!ndctl_new");
-		return PMEM2_E_ERRNO;
+		errno = ndctl_new(&ctx) * (-1);
+		if (errno) {
+			ERR("!ndctl_new");
+			return PMEM2_E_ERRNO;
+		}
+
+		int rv = pmem2_region_namespace(ctx, src, &region, &ndns);
+		if (rv) {
+			LOG(1, "getting region and namespace failed");
+			goto end;
+		}
+
+		if (!region) {
+			ERR("unknown region");
+			rv = PMEM2_E_DAX_REGION_NOT_FOUND;
+			goto end;
+		}
+
+		*region_id = ndctl_region_get_id(region);
+
+	end:
+		ndctl_unref(ctx);
+		return rv;
+		
+	} else {
+		SUPPRESS_UNUSED(src, region_id);
+		LOG(3, "Cannot read region id - ndctl is not available");
+
+		return 0;
 	}
-
-	int rv = pmem2_region_namespace(ctx, src, &region, &ndns);
-	if (rv) {
-		LOG(1, "getting region and namespace failed");
-		goto end;
-	}
-
-	if (!region) {
-		ERR("unknown region");
-		rv = PMEM2_E_DAX_REGION_NOT_FOUND;
-		goto end;
-	}
-
-	*region_id = ndctl_region_get_id(region);
-
-end:
-	ndctl_unref(ctx);
-	return rv;
 }
