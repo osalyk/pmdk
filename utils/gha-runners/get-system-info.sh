@@ -10,6 +10,7 @@ function system_info {
 	echo "********** system_info **********"
 	cat /etc/os-release | grep -oP "PRETTY_NAME=\K.*"
 	uname -r
+	echo "env"
 	echo "libndctl: $(pkg-config --modversion libndctl || echo 'libndctl not found')"
 	echo "valgrind: $(pkg-config --modversion valgrind || echo 'valgrind not found')"
 	echo "******************** memory-info *******************"
