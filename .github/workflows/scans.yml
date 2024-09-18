@@ -7,33 +7,46 @@ on:
     # run this job at 00:00 UTC every day
     - cron:  '0 0 * * *'
 
+permissions: {}
+
 jobs:
   call-bandit:
     uses: ./.github/workflows/scan_bandit.yml
     name: Bandit
+    permissions: {}
   call-codeql:
     uses: ./.github/workflows/scan_codeql.yml
     name: CodeQL
+    permissions:
+      actions: read
+      contents: read
+      security-events: write
   call-coverity:
     uses: ./.github/workflows/scan_coverity.yml
     secrets:
       COVERITY_SCAN_NOTIFICATION_EMAIL:  ${{ secrets.COVERITY_SCAN_NOTIFICATION_EMAIL }}
       COVERITY_SCAN_TOKEN:               ${{ secrets.COVERITY_SCAN_TOKEN }}
     name: Coverity
+    permissions: {}
   call-coverage:
     uses: ./.github/workflows/scan_coverage.yml
     secrets:
       CODECOV_TOKEN: ${{ secrets.CODECOV_TOKEN }}
     name: Coverage
+    permissions: {}
   call-documentation:
     uses: ./.github/workflows/scan_documentation.yml
     name: Documentation
+    permissions: {}
   call-ubsan:
     uses: ./.github/workflows/scan_ubsan.yml
     name: UBSAN
+    permissions: {}
   call-stack-usage:
     uses: ./.github/workflows/scan_stack_usage.yml
     name: Stack usage
+    permissions: {}
   call-log-calls:
     uses: ./.github/workflows/scan_log_calls.yml
     name: Log calls
+    permissions: {}
