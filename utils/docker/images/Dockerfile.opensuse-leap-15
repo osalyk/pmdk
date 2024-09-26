@@ -7,7 +7,7 @@
 #
 
 # Pull base image
-FROM opensuse/leap:15
+FROM opensuse/leap:15@sha256:a74d4072e639c75ca127df3d869c1e57bcc44a093a969550f348a3ead561fe4f
 MAINTAINER tomasz.gromadzki@intel.com
 
 # Set required environment variables
