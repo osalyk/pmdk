@@ -17,6 +17,9 @@ git config user.email "test@package.com"
 git config user.name "test package"
 git tag -a 1.4.99 -m "1.4" HEAD~1 || true
 
+echo $CC
+echo $PMDK_CC
+
 echo "## Build package (and run basic tests)"
 pushd $WORKDIR
 export PCHECK_OPTS="-j2 BLACKLIST_FILE=${BLACKLIST_FILE}"
